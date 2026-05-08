@@ -12,14 +12,43 @@
   More tools are coming soon.
 </p>
 
-# Discord Bridge Bot
+# AI Discord Manager
 
-A Python Discord bot that lets an authorized user administer a Discord server
-through prefix commands. It can inspect current server state, list channels,
-roles and members, create/manage channels and roles, post messages, and run
-basic moderation actions.
+A Python Discord bridge bot designed for AI coding agents such as Codex,
+Claude Code, OpenCode, and similar local agents.
 
-## Setup
+The idea is simple: give an authorized AI agent a safe Discord control surface.
+The agent can run or edit `bot.py`, inspect the current server state, and then
+use Discord-native commands to create channels, manage roles, post updates,
+moderate members, or automate a server setup.
+
+This is useful when you want an agent to manage a Discord server as part of a
+larger workflow without giving it direct access to your Discord account.
+
+## How AI Agents Use It
+
+An AI agent can work with this repository in two ways:
+
+1. Run `python bot.py`, then issue prefix commands in Discord such as
+   `!list-channels`, `!create-channel`, `!announce`, or `!give-role`.
+2. Write focused one-shot Python scripts that import/use `discord.py` and the
+   same `.env` token to perform larger setup tasks, then shut down immediately.
+
+If the bot is missing a capability, the agent should edit `bot.py`, add the
+needed command, run the checks, and then use the enhanced bot. See
+[`ai-agent_instructions.md`](ai-agent_instructions.md) for agent-specific
+operating instructions.
+
+## What It Can Do
+
+- Read server state: channels, roles, members, permissions, and snapshots.
+- Create, rename, move, lock, unlock, and delete channels.
+- Create and manage roles.
+- Send messages, announcements, links, DMs, pins, and cleanup actions.
+- Run basic moderation commands such as timeout, kick, ban, and unban.
+- Act as a reusable foundation for AI-driven Discord server automation.
+
+## Setup for Users and Agents
 
 ### 1. Create and invite the bot
 
@@ -46,7 +75,7 @@ basic moderation actions.
 
 Using Administrator also works for testing, but granular permissions are safer.
 
-### 2. Install and run
+### 2. Install and run locally
 
 ```bash
 pip install -r requirements.txt
@@ -54,7 +83,8 @@ copy .env.example .env
 python bot.py
 ```
 
-Edit `.env` before running and paste your real bot token.
+Edit `.env` before running and paste your real bot token. Keep `.env` local and
+private; agents should never print or commit it.
 
 ## Environment
 
@@ -67,7 +97,7 @@ Edit `.env` before running and paste your real bot token.
 To get a Discord user ID, enable **Settings -> Advanced -> Developer Mode**,
 right-click the user, then choose **Copy User ID**.
 
-## Commands
+## Discord Commands
 
 Type `!help` in Discord for the live command list. Replace `!` with your
 configured `COMMAND_PREFIX` if you changed it.
@@ -136,3 +166,5 @@ configured `COMMAND_PREFIX` if you changed it.
 - Rotate `DISCORD_TOKEN` immediately if it leaks.
 - Discord role hierarchy still applies. If a command fails with a permission
   error, run `!bot-permissions` and check the bot role position.
+- Let agents enhance `bot.py` when needed, but make them run syntax/import
+  checks before using the changed bot.
