@@ -1,3 +1,17 @@
+<p align="center">
+  <a href="https://github.com/jumpino27?tab=repositories">
+    <img alt="Explore more open-source projects" src="https://img.shields.io/badge/Explore%20more%20open--source%20projects-GitHub-181717?logo=github">
+  </a>
+  <a href="https://revolut.me/jumpino">
+    <img alt="Support the creator" src="https://img.shields.io/badge/Support%20the%20creator-Revolut-0075EB">
+  </a>
+</p>
+
+<p align="center">
+  Browse more Jumpino open-source projects and support ongoing development.
+  More tools are coming soon.
+</p>
+
 # Discord Bridge Bot
 
 A Python Discord bot that lets an authorized user administer a Discord server
