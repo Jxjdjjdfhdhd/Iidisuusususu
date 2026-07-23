@@ -1,7 +1,8 @@
 """
-Discord Bridge Bot
-------------------
+Discord Bridge Bot with Self-Pinging
+------------------------------------
 Prefix-command bot for administering a Discord guild from chat.
+Includes web server for Render deployment with automatic self-pinging.
 
 Run:
     python bot.py
@@ -16,12 +17,16 @@ from __future__ import annotations
 import logging
 import os
 import re
+import threading
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Iterable
 
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
+from flask import Flask, jsonify
+import requests
 
 # ---------------------------------------------------------------------------
 # Config
@@ -41,11 +46,48 @@ if not TOKEN:
         "DISCORD_TOKEN is missing. Copy .env.example to .env and fill it in."
     )
 
+# Web server config
+PORT = int(os.getenv("PORT", 8080))
+PING_INTERVAL = int(os.getenv("PING_INTERVAL", 300))  # 5 minutes default
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 log = logging.getLogger("bridge")
+
+# ---------------------------------------------------------------------------
+# Flask Web Server (for self-pinging)
+# ---------------------------------------------------------------------------
+app = Flask(__name__)
+bot_instance = None
+bot_start_time = None
+
+@app.route('/')
+@app.route('/ping')
+@app.route('/health')
+def health_check():
+    """Health check endpoint for self-pinging"""
+    return jsonify({
+        "status": "alive",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "bot_ready": bot_instance.is_ready() if bot_instance else False,
+        "uptime": str(datetime.now(timezone.utc) - bot_start_time) if bot_start_time else "unknown"
+    })
+
+def run_web_server():
+    """Start the Flask web server"""
+    app.run(host='0.0.0.0', port=PORT, debug=False, use_reloader=False)
+
+def self_pinger():
+    """Continuously ping the web server to keep it alive on Render"""
+    while True:
+        try:
+            time.sleep(PING_INTERVAL)
+            response = requests.get(f'http://localhost:{PORT}/ping', timeout=10)
+            log.debug(f"Self-ping: {response.status_code}")
+        except Exception as e:
+            log.warning(f"Self-ping failed: {e}")
 
 # ---------------------------------------------------------------------------
 # Bot setup
@@ -182,8 +224,14 @@ def count_members_by_role(members: Iterable[discord.Member]) -> dict[int, int]:
 # ---------------------------------------------------------------------------
 @bot.event
 async def on_ready():
-    log.info("Logged in as %s (id=%s)", bot.user, bot.user.id)
-    log.info("Connected to %d guild(s)", len(bot.guilds))
+    global bot_instance, bot_start_time
+    bot_instance = bot
+    bot_start_time = datetime.now(timezone.utc)
+    
+    log.info("✅ Logged in as %s (id=%s)", bot.user, bot.user.id)
+    log.info("🌐 Web server running on port %d", PORT)
+    log.info("🏓 Self-pinger active (interval: %d seconds)", PING_INTERVAL)
+    log.info("📡 Connected to %d guild(s)", len(bot.guilds))
 
 
 @bot.event
@@ -750,6 +798,17 @@ async def unban_user(ctx: commands.Context, user_id: int, *, reason: str = "No r
 # Entrypoint
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
+    # Start web server in background
+    web_thread = threading.Thread(target=run_web_server, daemon=True)
+    web_thread.start()
+    log.info("🚀 Web server thread started")
+    
+    # Start self-pinger in background
+    pinger_thread = threading.Thread(target=self_pinger, daemon=True)
+    pinger_thread.start()
+    log.info("🏓 Self-pinger thread started (interval: %d seconds)", PING_INTERVAL)
+    
+    # Start Discord bot
     try:
         bot.run(TOKEN)
     except discord.PrivilegedIntentsRequired:
@@ -757,4 +816,4 @@ if __name__ == "__main__":
             "Discord rejected the requested privileged intents. Enable "
             "Message Content Intent and Server Members Intent in the Discord "
             "Developer Portal for this bot, then run python bot.py again."
-        )
+    )
